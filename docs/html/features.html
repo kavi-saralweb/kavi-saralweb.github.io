@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="../css/github.css">
+        <title></title>
+    </head>
+    <body>
+        <p><a href="/docs/html/index.html">index</a></p>
+<h1 id="jsl-features">JSL Features</h1>
+<p><span id="builtins"></p>
+<h2 id="builtins">Builtins</h2>
+<p></span></p>
+<p>JSL supports a few important builtins as part of the language. Please refer to the <a href="/docs/html/builtins.html">builtins chapter</a> for a complete description. </p>
+<p>We introduce builtins by extending our bid/offer matching procedure to also report &quot;unmatched&quot; orders. The rule is modified with a $or builtin which goes through all bids and either finds a matching offer, OR uses the $bind builtin to emit an unmatched warning into the bid record output along with the string &#39;N/A/&#39; for the offerer name.</p>
+<pre><code>
+var JSL = require(&#39;lib-jsl&#39;);
+
+var offers = [
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;sandeep&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 20,
+    qty : 100
+}],
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;shekhar&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 25,
+    qty : 100
+}],
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;ruchir&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 20,
+    qty : 200
+}]
+
+]
+
+
+var bids = [
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;kavi&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 20,
+    qty : 100
+}],
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;pradeep&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 30,
+    qty : 100
+}]
+
+
+]
+
+var rules = [
+    [   
+        { match : {offerer : &#39;$offerer&#39;, bidder : &#39;$bidder&#39;, symbol : &#39;$symbol&#39;, price : &#39;$price&#39;, qty : &#39;$qty&#39;, status : &#39;$status&#39;}},
+        { type: &#39;bid&#39;, bidder : &#39;$bidder&#39;, symbol : &#39;$symbol&#39;, price : &#39;$price&#39;, qty : &#39;$qty&#39;},
+        { $or : [
+            { $and : [ 
+                { type : &#39;offer&#39;, offerer : &#39;$offerer&#39;, symbol : &#39;$symbol&#39;, price : &#39;$price&#39;, qty : &#39;$qty&#39;},
+                { $bind : [ &#39;$status&#39;, &#39;matched&#39; ] }
+            ] },
+            { $bind : [[&#39;$status&#39;, &#39;$offerer&#39;] , [&#39;**unmatched**&#39;, &#39;N/A&#39;] ] }
+        ] }
+
+    ]
+]
+
+var jsl = new JSL({
+    rules: rules.concat(bids, offers),
+    query: [{match: &#39;$match&#39;}],
+    transform: &#39;$match&#39;
+});
+
+var response = jsl.run();
+console.log(&#39;matches: &#39;, response);
+
+module.exports = response;
+
+
+/*
+response 
+
+[
+    {
+        &quot;offerer&quot;: &quot;sandeep&quot;,
+        &quot;bidder&quot;: &quot;kavi&quot;,
+        &quot;symbol&quot;: &quot;ABC&quot;,
+        &quot;price&quot;: 20,
+        &quot;qty&quot;: 100,
+        &quot;status&quot;: &quot;matched&quot;
+    },
+    {
+        &quot;offerer&quot;: &quot;N/A&quot;,
+        &quot;bidder&quot;: &quot;pradeep&quot;,
+        &quot;symbol&quot;: &quot;ABC&quot;,
+        &quot;price&quot;: 30,
+        &quot;qty&quot;: 100,
+        &quot;status&quot;: &quot;**unmatched**&quot;
+    }
+]
+
+*/
+</code></pre><p>We use the $or, $and and $bind builtins in this example. </p>
+<p>The $or builtin stops on first success, and $and succeeds only if all its objects do.</p>
+<p>The $bind utility rule has the following (internal) implementation:</p>
+<pre><code>{ $bind : [ &#39;$x&#39;, &#39;$x&#39; ] }
+</code></pre><p>$bind is nothing but the equivalent of the familiar unify utility in logic programming languages. It succeeds if the two arguments unify with each other (JSL defines unification as first argument containing the second at all levels). In this example we use $bind to do the equivalent of assigning avalue to a variable, as well as assignment of multiple values to multiple variables by position in arrays. In general, any two JS objects can be unified by $bind.</p>
+<p>The general shape of builtins is as follows :</p>
+<pre><code>    { &lt;$xxx&gt; : [ arg1 , arg2 ... ] }
+</code></pre><p><em>Note that a builtin object can have only one key, which must be a $prefixed name of a valid builtin. While $and and $or can have any number of arguments, some other builtins (e.g. $not, $bind, $query) have a fixed number of arguments</em></p>
+<p><span id="callbacks"></p>
+<h2 id="callbacks">Callbacks</h2>
+<p></span></p>
+<p>As an embedded logic programming library, JSL supports callbacks into the host. This is done using a special builtin: <strong>$call</strong></p>
+<p>We illustrate the use of callbacks by extending our bid/offer to support &quot;best match&quot;. Simply stated, we want the spread between bid and offer to be the maximum possible, so the seller gets the best possible price, and the buyer gets the best possible discount. We also include support for &quot;open orders&quot;, where a null price value indicates an intent to buy (bid) or sell (offer) at any price.</p>
+<p><em>We now make explicit an assumption running through these example, i.e. a person (bidder or offerer) can have only one order in the system at a time. Thus, bidder/offerer names serve as unique ids in our orders database. This is just a simplification for the example</em></p>
+<p><em>Finally, we output only a feasible order schedule instead of all possible matches as we have done so far. This is done by keeping track of which offers have been consumed by some bidder in the matching process so they do not show up in any other match</em></p>
+<pre><code>
+var JSL = require(&#39;lib-jsl&#39;);
+
+var offers = [
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;sandeep&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 18,
+    qty : 100
+}],
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;ruchir&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 20,
+    qty : 100
+}],
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;prachi&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 16,
+    qty : 100
+}],
+[{
+    type : &#39;offer&#39;,
+    offerer : &#39;avantika&#39;,
+    bidder : &#39;$bidder&#39;,
+    symbol : &#39;ABC&#39;,
+    price : null,
+    qty : 200
+}]
+
+]
+
+
+var bids = [
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;kavi&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 20,
+    qty : 100
+}],
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;pradeep&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 21,
+    qty : 100
+}],
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;taran&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 20,
+    qty : 200
+}],
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;naveen&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 26,
+    qty : 100
+}],
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;prashant&#39;,
+    symbol : &#39;ABC&#39;,
+    price : 25,
+    qty : 200
+}],
+[{
+    type : &#39;bid&#39;,
+    offerer : &#39;$offerer&#39;,
+    bidder : &#39;shipu&#39;,
+    symbol : &#39;ABC&#39;,
+    price : null,
+    qty : 200
+}]
+
+
+]
+
+var rules = [
+
+    [
+        { match : {offerer : &#39;$offerer&#39;, bidder : &#39;$bidder&#39;, symbol : &#39;$symbol&#39;, price : &#39;$price&#39;, qty : &#39;$qty&#39;}},
+        { $query : [ [{ accumulateBestMatches : &#39;$x&#39;}], null, &#39;$y&#39;] },
+        { type : &#39;bid&#39;, bidder : &#39;$bidder&#39;, symbol : &#39;$symbol&#39;, qty : &#39;$qty&#39;},
+        { $call : [ &#39;getBestMatch&#39;, &#39;$bidder&#39;, [&#39;$offerer&#39;, &#39;$bidPrice&#39;, &#39;$price&#39;] ] }
+    ],
+    [
+        { accumulateBestMatches : &#39;$x&#39;},
+        { type : &#39;bid&#39;, bidder : &#39;$bidder&#39;, symbol : &#39;$symbol&#39;, price : &#39;$bidPrice&#39;, qty : &#39;$qty&#39;},
+        { type : &#39;offer&#39;, offerer : &#39;$offerer&#39;, symbol : &#39;$symbol&#39;, price : &#39;$offerPrice&#39;, qty : &#39;$qty&#39;},
+        { $call : [ &#39;accumulateMatch&#39;, &#39;$bidder&#39;, &#39;$bidPrice&#39;, &#39;$offerer&#39;, &#39;$offerPrice&#39; ] }
+    ]
+
+
+]
+
+var bestOffers = {};
+var offersConsumed = {};
+var callbacks = {
+    accumulateMatch : function(bidder, bidPrice, offerer, offerPrice) {
+        if (!offersConsumed[offerer]) {
+            if (bestOffers[bidder] == null) {
+                if (offerPrice != null &amp;&amp; bidPrice != null &amp;&amp; bidPrice - offerPrice &gt; 0) { 
+                    bestOffers[bidder] = [offerer, bidPrice, offerPrice];
+                    offersConsumed[offerer] = true;
+                }
+                else if (offerPrice == null &amp;&amp; bidPrice != null) {
+                    bestOffers[bidder] = [offerer, bidPrice, bidPrice]
+                    offersConsumed[offerer] = true;
+                }
+                else if (offerPrice != null &amp;&amp; bidPrice == null) {
+                    bestOffers[bidder] = [offerer, offerPrice, offerPrice]
+                    offersConsumed[offerer] = true;
+                }
+            }
+            else {
+                var spread = bestOffers[bidder][1] - bestOffers[bidder][2];
+                if (offerPrice != null &amp;&amp; bidPrice != null &amp;&amp; bidPrice - offerPrice &gt; spread) { 
+                    offersConsumed[bestOffers[bidder][0]] = false;
+                    bestOffers[bidder] = [offerer, bidPrice, offerPrice];
+                    offersConsumed[offerer] = true;
+                }
+                else if (offerPrice != null &amp;&amp; bidPrice == null &amp;&amp; offerPrice &lt; bestOffers[bidder][2]) {
+                    bestOffers[bidder] = [offerer, offerPrice, offerPrice]
+                }
+            }
+        }
+        return true; // accumulation always succeeds
+    },
+
+    //{ $call : [ &#39;getBestMatch&#39;, &#39;$bidder&#39;, [&#39;$offerer&#39;, &#39;$price&#39;] ] }
+    getBestMatch : function(bidder) {
+        var result = null;
+        if (bestOffers[bidder] != null) {
+            result = bestOffers[bidder]
+        }
+        return result;
+    }
+}
+
+var jsl = new JSL({
+    rules: rules.concat(bids, offers),
+    query: [{match: &#39;$match&#39;}],
+    callbacks : callbacks,
+    transform: &#39;$match&#39;
+});
+
+var response = jsl.run();
+console.log(bestOffers);
+
+console.log(&#39;matches: &#39;, response);
+
+module.exports = response;
+
+
+/*
+response 
+
+[
+    {
+        &quot;offerer&quot;: &quot;prachi&quot;,
+        &quot;bidder&quot;: &quot;kavi&quot;,
+        &quot;symbol&quot;: &quot;ABC&quot;,
+        &quot;price&quot;: 16,
+        &quot;qty&quot;: 100
+    },
+    {
+        &quot;offerer&quot;: &quot;sandeep&quot;,
+        &quot;bidder&quot;: &quot;pradeep&quot;,
+        &quot;symbol&quot;: &quot;ABC&quot;,
+        &quot;price&quot;: 18,
+        &quot;qty&quot;: 100
+    },
+    {
+        &quot;offerer&quot;: &quot;avantika&quot;,
+        &quot;bidder&quot;: &quot;taran&quot;,
+        &quot;symbol&quot;: &quot;ABC&quot;,
+        &quot;price&quot;: 20,
+        &quot;qty&quot;: 200
+    },
+    {
+        &quot;offerer&quot;: &quot;ruchir&quot;,
+        &quot;bidder&quot;: &quot;naveen&quot;,
+        &quot;symbol&quot;: &quot;ABC&quot;,
+        &quot;price&quot;: 20,
+        &quot;qty&quot;: 100
+    }
+]
+
+*/
+</code></pre><p>The ruless organize the matching procedure at the top level. An accumulator is called once for each possible bid/offer pair with matching qty via the $query callback which is basically a subquery mechanism (see <a href="/docs/html/builtins/query">$query</a>. The accumlateBestMatches callback stores winning matches in a variable visible to its scope. The getBestMatch callback accesses this variable once for each bidder, failing if a best match is not found. </p>
+<p>The callback itself is supplied as a function valued key in the callbacks object given to Jsl as part of its parameters.</p>
+<pre><code>var jsl = new JSL({rules : ruleset.concat(row), query: query, transform : transform, callbacks : callbacks});
+</code></pre><p>The shape of the <strong>$call</strong> builtin is as follows :</p>
+<pre><code>    { $call : [ &lt;&#39;cbname&#39;&gt;, arg1, arg2, ..., [&#39;$outvar&#39;] ] }
+</code></pre><p>The first argument to $call is the name of the callback to be called. This callback function should be present in the callbacks parameter when running JSL. Subsequent arguments are handed to the callback by position with the exception of [&#39;$outvar&#39;] if present. Note that an array object at the end of the parameters list is assumed to specify the $outvar. Any value returned by the callback is <em>unified</em> with the $outvar. Typically there are two ways to use $outvar:</p>
+<ol>
+<li><p>Supply a variable, so it captures the return value of the callback</p>
+<ul>
+<li><code>{$call : [ &#39;getTime&#39;, [&#39;$x&#39;] ]}</code> will return the current time in $x.</li>
+</ul>
+</li>
+<li><p>Supply a literal value, so that the callback succeeds only if it returns something that can be <em>unified</em> with it</p>
+<ul>
+<li><code>{$call : [ &#39;getDay&#39;, [&#39;Monday&#39;] ]}</code> will fail unless getDay returns &#39;Monday&#39;, assuming getDay needs no arguments</li>
+</ul>
+</li>
+</ol>
+<p><em>Please note that if the callback requires an array valued parameter at the end, it must be supplied at least an empty array as the last parameter in the <strong>$call</strong> parameter list in order to avoid confusing the last input parameter as the $outvar.</em></p>
+
+    </body>
+</html>
