@@ -119,7 +119,7 @@ response
 <p>The $or builtin stops on first success, and $and succeeds only if all its objects do.</p>
 <p>The $bind utility rule has the following (internal) implementation:</p>
 <pre><code>{ $bind : [ &#39;$x&#39;, &#39;$x&#39; ] }
-</code></pre><p>$bind is nothing but the equivalent of the familiar unify utility in logic programming languages. It succeeds if the two arguments unify with each other (JSL defines unification as first argument containing the second at all levels). In this example we use $bind to do the equivalent of assigning avalue to a variable, as well as assignment of multiple values to multiple variables by position in arrays. In general, any two JS objects can be unified by $bind.</p>
+</code></pre><p>$bind is nothing but the equivalent of the familiar unify utility in logic programming languages. It succeeds if the two arguments unify with each other (JSL defines unification as first argument containing the second at all levels). In this example we use $bind to do the equivalent of assigning a value to a variable, as well as assignment of multiple values to multiple variables by position in arrays. In general, any two JS objects can be unified by $bind.</p>
 <p>The general shape of builtins is as follows :</p>
 <pre><code>    { &lt;$xxx&gt; : [ arg1 , arg2 ... ] }
 </code></pre><p><em>Note that a builtin object can have only one key, which must be a $prefixed name of a valid builtin. While $and and $or can have any number of arguments, some other builtins (e.g. $not, $bind, $query) have a fixed number of arguments</em></p>
@@ -127,9 +127,9 @@ response
 <h2 id="callbacks">Callbacks</h2>
 <p></span></p>
 <p>As an embedded logic programming library, JSL supports callbacks into the host. This is done using a special builtin: <strong>$call</strong></p>
-<p>We illustrate the use of callbacks by extending our bid/offer to support &quot;best match&quot;. Simply stated, we want the spread between bid and offer to be the maximum possible, so the seller gets the best possible price, and the buyer gets the best possible discount. We also include support for &quot;open orders&quot;, where a null price value indicates an intent to buy (bid) or sell (offer) at any price.</p>
-<p><em>We now make explicit an assumption running through these example, i.e. a person (bidder or offerer) can have only one order in the system at a time. Thus, bidder/offerer names serve as unique ids in our orders database. This is just a simplification for the example</em></p>
-<p><em>Finally, we output only a feasible order schedule instead of all possible matches as we have done so far. This is done by keeping track of which offers have been consumed by some bidder in the matching process so they do not show up in any other match</em></p>
+<p>We illustrate the use of callbacks by extending our bid/offer matching example to support &quot;best match&quot;. Simply stated, we want the spread between bid and offer to be the maximum possible, so the seller gets the best possible price, and the buyer gets the best possible discount. We also include support for &quot;open orders&quot;, where a null price value indicates an intent to buy (bid) or sell (offer) at any price. We further assume that open bid/offers should be matched at the corresponding offer/bid, i.e. with zero spread.</p>
+<p><em>We now make explicit an assumption running through these example, i.e. a person (bidder or offerer) can have only one order in the system at a time. Thus, bidder/offerer names serve as unique ids in our orders database. This is just a simplification for this example.</em></p>
+<p><em>Finally, we output  <strong>feasible order schedule</strong> now,  instead of all possible matches as we have done so far. This is done by keeping track of which offers have been consumed by some bidder in the matching process</em></p>
 <pre><code>
 var JSL = require(&#39;lib-jsl&#39;);
 
@@ -275,7 +275,6 @@ var callbacks = {
         return true; // accumulation always succeeds
     },
 
-    //{ $call : [ &#39;getBestMatch&#39;, &#39;$bidder&#39;, [&#39;$offerer&#39;, &#39;$price&#39;] ] }
     getBestMatch : function(bidder) {
         var result = null;
         if (bestOffers[bidder] != null) {
@@ -293,7 +292,6 @@ var jsl = new JSL({
 });
 
 var response = jsl.run();
-console.log(bestOffers);
 
 console.log(&#39;matches: &#39;, response);
 

@@ -71,8 +71,8 @@ response
 </li>
 </ul>
 <p><span id="unification"></p>
-<h2 id="unification">Unification</h2>
 <p></span></p>
+<h2 id="unification">Unification</h2>
 <p>We extend our example by introducing multiple bids, and asking the system to produce a contract for the one which matches a given offer. The bids variable is now an array of arrays, i.e. a valid JSl batch of facts (data). It can be given directly as rules to JSL.</p>
 <pre><code>
 var JSL = require(&#39;lib-jsl&#39;);
@@ -139,8 +139,8 @@ response
 */
 </code></pre><p>The system produces a completed contract based on the one matching bid in the set of bids.</p>
 <p><span id="transform"></p>
-<h2 id="data-transformation">Data transformation</h2>
 <p></span></p>
+<h2 id="data-transformation">Data transformation</h2>
 <p>We now introduce multiple matching bids, and ask the system to produce just a list of names of matching bidders. </p>
 <pre><code>
 var JSL = require(&#39;lib-jsl&#39;);
@@ -216,8 +216,8 @@ response
 </code></pre><p>We used the query variable &#39;$bidder&#39; to transform (shape) the result. By indicating <code>transform : &#39;$bidder&#39;</code> we asked the system to produce an array of values which were assigned to the variable &#39;$bidder&#39;. The transform can  be an arbitrary JS object containing any of the variables from the query.</p>
 <p><em>Note: If the transform is left unspecified, the result is an array of arrays, i.e. a valid JSL batch, with each element of the outer array becoming a fully instantiated version of the query object.</em></p>
 <p><span id="rules"></p>
-<h2 id="logic-programming-rules">Logic programming / Rules</h2>
 <p></span></p>
+<h2 id="logic-programming-rules">Logic programming / Rules</h2>
 <p>We complete our basic example by introducing multiple bids as well as offers, and ask the system to produce a set of possible matches (contracts).</p>
 <pre><code>
 var JSL = require(&#39;lib-jsl&#39;);
@@ -383,15 +383,15 @@ response
 <pre><code>query: [{match: &#39;$match&#39;}]
 </code></pre><p>Finally, note that we concatenate rules and facts (data) before calling Jsl, combining all rules and facts into one array.</p>
 <p><span id="algorithm"></p>
-<h2 id="jsl-algorithm">JSL algorithm</h2>
 <p></span></p>
+<h2 id="jsl-algorithm">JSL algorithm</h2>
 <p>For any given rule, the <em>head</em> is <em>satisfied</em> if each part of the <em>body</em> is <em>satisfied</em>. Thus <em>facts</em> are always <em>satisfied</em>. Each part of the <em>body</em> is <em>unified</em> against the set of rules, to find a rule where the <em>head</em> of the rule <em>matches</em> the body part.</p>
 <p>Since we are dealing with JS objects, we define <em>match</em> to mean containment, i.e. the body part must be fully contained in the head of the <em>matched</em> rule. In this example, the query object <code>{ match: ... }</code> is completely contained in the head of the matching rule as a path (only the keys/paths matter for <em>matching</em>).</p>
 <p>Query execution proceeds by attempting to <em>satisfy</em> the query object by <em>unifying</em> it against the rules. If any rule <em>matches</em> the query, the unification proceeds recursively into its <em>body</em> parts, until there are no more <em>body</em> parts to be <em>satisfied</em> , or a <em>body</em> part fails to <em>unify</em>. All rules that <em>match</em> the query are tried. Thus a query can produce multiple results.</p>
 <p>In this example, the query <em>matches</em> the matching rule, and each <em>body</em> part of the matching rule successfully unifies against pairs of bid and offer records; so  we obtain a set of fully instantiated &#39;$match&#39; values in the result.</p>
 <p><span id="summary"></p>
-<h2 id="summary">Summary</h2>
 <p></span></p>
+<h2 id="summary">Summary</h2>
 <p>This overview showed a naive bid/offer matching procedure which started by merging two objects, and progressed in complexity to produce matching pairs from multiple types of records.</p>
 <p>The <a href="/docs/html/features.html">next chapter</a> introduces features of JSL (builtins, callbacks) which allow refinement of the matching procedure to make it more capable.</p>
 <p>We have found JSL useful for the following tasks :</p>
@@ -403,7 +403,7 @@ response
 </li>
 <li><p>Information Retrieval</p>
 <ul>
-<li>Maintain and query small, in-memory databases of non trivial complexity such as configurations, dependencies, etc. See  <a href="/docs/html/ir.html">information retrieval example</a>. The chapter is based on a textbook example, but covers salient concepts of information retrieval.</li>
+<li>Maintain and query small, in-memory databases of non trivial complexity such as configurations, dependencies, etc. See  <a href="/docs/html/example-ir.html">information retrieval example</a>. The chapter is based on a textbook example, but covers salient concepts of information retrieval.</li>
 </ul>
 </li>
 <li><p>Test automation </p>
