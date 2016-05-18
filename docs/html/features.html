@@ -117,9 +117,7 @@ response
 */
 </code></pre><p>We use the $or, $and and $bind builtins in this example. </p>
 <p>The $or builtin stops on first success, and $and succeeds only if all its objects do.</p>
-<p>The $bind utility rule has the following (internal) implementation:</p>
-<pre><code>{ $bind : [ &#39;$x&#39;, &#39;$x&#39; ] }
-</code></pre><p>$bind is nothing but the equivalent of the familiar unify utility in logic programming languages. It succeeds if the two arguments unify with each other (JSL defines unification as first argument containing the second at all levels). In this example we use $bind to do the equivalent of assigning a value to a variable, as well as assignment of multiple values to multiple variables by position in arrays. In general, any two JS objects can be unified by $bind.</p>
+<p>$bind is nothing but the equivalent of the familiar unify utility in logic programming languages. It succeeds if the two arguments unify with each other (JSL defines unification as first argument containing the second at all levels). In this example we use $bind to do the equivalent of assigning a value to a variable, as well as assignment of multiple values to multiple variables by position in arrays. In general, any two JS objects can be unified by $bind.</p>
 <p>The general shape of builtins is as follows :</p>
 <pre><code>    { &lt;$xxx&gt; : [ arg1 , arg2 ... ] }
 </code></pre><p><em>Note that a builtin object can have only one key, which must be a $prefixed name of a valid builtin. While $and and $or can have any number of arguments, some other builtins (e.g. $not, $bind, $query) have a fixed number of arguments</em></p>

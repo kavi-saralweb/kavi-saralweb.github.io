@@ -32,7 +32,7 @@
 <h2 id="-bind">$bind</h2>
 <p></span></p>
 <p>$bind attempts to unify two objects (or variables which are in turn bound to objects). The unification is directional, i.e. the second object should be contained in the first object. This behavior is typical when working with JSON data; it is often desirable to extract values from a (large) row into a smaller row. </p>
-<p>If both arguments are variables, the usual containment rules apply.</p>
+<p>If one or both arguments are variables, the usual containment rules apply to the values to which those variables are bound.</p>
 <p>The following examples illustrate the containment semantics of $bind:</p>
 <pre><code>
 var JSL = require(&#39;../../..&#39;);
@@ -51,13 +51,6 @@ var ruleset = [
         {$bind : [ { a : &#39;$x&#39;, b : &#39;$y&#39;, c : { p : 1, q : &#39;$z&#39;, r : 3} , d : 10}, { a : 10, b : 11 , c : {q : 12} }  ]  }
     ],
 
-    /* this will work even though $p is second object and apparently not contained in first object, 
-        because $p is a variable, it is considered as the first object
-    */
-    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;] },
-        {$bind : [ &#39;$p&#39;, { a : 13 , b : 14 , c : 15, d:10 } ] },
-        {$bind : [  { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}, &#39;$p&#39;  ]  }
-    ],
 
     /* boundary cases */
 
@@ -69,10 +62,95 @@ var ruleset = [
     ],
 
     [   { result : [&#39;this will succeed, empty object is contained in a non empty object&#39;] },
-        {$bind : [ { a : 1 , b : 2 , c : 3 }, {}  ] }
+        {$bind : [ { a : 1 , b : 2 , c : 3 }, {}  ] },
+        { $bind : [ &#39;$x&#39;, {} ] }
     ],
     [   { result : [&#39;this will succeed, empty object is equal to empty object&#39;] },
         {$bind : [ {}, {}  ] }
+    ],
+
+    /*  cases involving variables
+    */
+
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 106 , b : 107 , c : 108 } ] },
+        {$bind : [  { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;, d : 1}, &#39;$p&#39;  ]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 109 , b : 110 , c : 111, d: 112 } ] },
+        {$bind : [  &#39;$p&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ]  }
+    ],
+
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;correct $bind behavior with 1 variable&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 13 , b : 15 , c : 17, d:19 } ] },
+        {$bind : [  &#39;$p&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;correct with 1 var 1 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 13 , b : 15 , c : 17, d:19 } ] },
+        {$bind : [ &#39;$q&#39;, &#39;$p&#39; ] },
+        {$bind : [  &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;correct with 1 var 2 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 13 , b : 15 , c : 17, d:19 } ] },
+        {$bind : [ &#39;$q&#39;, &#39;$p&#39; ] },
+        {$bind : [ &#39;$r&#39;, &#39;$q&#39; ] },
+        {$bind : [  &#39;$r&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}]  }
+    ],
+
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;incorrect $bind behavior with 1 variable&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 14 , b : 16 , c : 18, d:20 } ] },
+        {$bind : [  { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}, &#39;$p&#39;  ]  }
+    ],
+
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;incorrect with 1 var 1 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 14 , b : 16 , c : 18, d:20 } ] },
+        { $bind : [ &#39;$q&#39;, &#39;$p&#39; ] },
+        {$bind : [  { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}, &#39;$q&#39;  ]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;incorrect with 1 var 2 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 14 , b : 16 , c : 18, d:20 } ] },
+        { $bind : [ &#39;$q&#39;, &#39;$p&#39; ] },
+        { $bind : [ &#39;$r&#39;, &#39;$q&#39; ] },
+        {$bind : [  { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;}, &#39;$r&#39;  ]  }
+    ],
+
+
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;correct $bind behavior with 2 vars&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 22 , b : 24 , c : 26, d:28 } ] },
+        {$bind : [ &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ] },
+        {$bind : [  &#39;$p&#39;,  &#39;$q&#39; ]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;correct with 2 vars 1 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 22 , b : 24 , c : 26, d:28 } ] },
+        {$bind : [ &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ] },
+        {$bind : [  &#39;$r&#39;,  &#39;$q&#39; ]  },
+        {$bind : [  &#39;$p&#39;,  &#39;$r&#39; ]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;correct with 2 vars 2 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 22 , b : 24 , c : 26, d:28 } ] },
+        {$bind : [ &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ] },
+        {$bind : [  &#39;$r&#39;,  &#39;$q&#39; ]  },
+        {$bind : [  &#39;$s&#39;,  &#39;$r&#39; ]  },
+        {$bind : [  &#39;$p&#39;,  &#39;$s&#39; ]  }
+    ],
+
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;incorrect $bind behavior with 2 vars&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 21 , b : 23 , c : 25, d:27 } ] },
+        {$bind : [ &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ] },
+        {$bind : [  &#39;$q&#39;,  &#39;$p&#39; ]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;incorrect with 2 vars 1 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 21 , b : 23 , c : 25, d:27 } ] },
+        {$bind : [ &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ] },
+        {$bind : [  &#39;$r&#39;,  &#39;$p&#39; ]  },
+        {$bind : [  &#39;$q&#39;,  &#39;$r&#39; ]  }
+    ],
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;incorrect with 2 vars 1 recursion&#39;] },
+        {$bind : [ &#39;$p&#39;, { a : 21 , b : 23 , c : 25, d:27 } ] },
+        {$bind : [ &#39;$q&#39;, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;} ] },
+        {$bind : [  &#39;$r&#39;,  &#39;$p&#39; ]  },
+        {$bind : [  &#39;$s&#39;,  &#39;$r&#39; ]  },
+        {$bind : [  &#39;$q&#39;,  &#39;$s&#39; ]  }
     ],
 
     /* failing cases */
@@ -93,18 +171,13 @@ var ruleset = [
     ],
 
     /* these won&#39;t work since second object is not contained in the first object */
-    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;] },
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;should fail as second object is not contained in first (1)&#39;] },
         {$bind : [ { a : 100, b : 101 , c : 102 }, { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;, d : 10} ]  }
     ],
-    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;] },
+    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;, &#39;should fail as second object is not contained in first (2)&#39;] },
         {$bind : [ { a : &#39;$x&#39;, b : &#39;$y&#39;, c : { p : 1, q : &#39;$z&#39;, r : 3} , d : 10}, { a : 103, b : 104 , c : {p : 1,  q : 105, r : 3, w : 4} }  ]  }
     ],
 
-    /* this won&#39;t work since $p is a variable, and is thus considered as the first object */
-    [   { result : [&#39;$x&#39;, &#39;$y&#39;, &#39;$z&#39;] },
-        {$bind : [ &#39;$p&#39;, { a : 106 , b : 107 , c : 108 } ] },
-        {$bind : [  { a : &#39;$x&#39;, b : &#39;$y&#39;, c : &#39;$z&#39;, d : 1}, &#39;$p&#39;  ]  }
-    ],
 
 
 ];
@@ -114,7 +187,7 @@ var transform = &#39;$result&#39;;
 
 var jsl = new JSL ({rules : ruleset, query: query, transform : transform});
 var response = jsl.run();
-
+console.log(response)
 module.exports = response;
 
 
@@ -143,11 +216,6 @@ response
         12
     ],
     [
-        13,
-        14,
-        15
-    ],
-    [
         &quot;this will succeed, empty array is contained in a non empty array&quot;
     ],
     [
@@ -158,14 +226,57 @@ response
     ],
     [
         &quot;this will succeed, empty object is equal to empty object&quot;
+    ],
+    [
+        106,
+        107,
+        108
+    ],
+    [
+        109,
+        110,
+        111
+    ],
+    [
+        13,
+        15,
+        17,
+        &quot;correct $bind behavior with 1 variable&quot;
+    ],
+    [
+        13,
+        15,
+        17,
+        &quot;correct with 1 var 1 recursion&quot;
+    ],
+    [
+        13,
+        15,
+        17,
+        &quot;correct with 1 var 2 recursion&quot;
+    ],
+    [
+        22,
+        24,
+        26,
+        &quot;correct $bind behavior with 2 vars&quot;
+    ],
+    [
+        22,
+        24,
+        26,
+        &quot;correct with 2 vars 1 recursion&quot;
+    ],
+    [
+        22,
+        24,
+        26,
+        &quot;correct with 2 vars 2 recursion&quot;
     ]
 ]
 
 */
 </code></pre><p>The first argument to $bind must contain all keys of the second, recursively. Values assigned to variables during binding (unification) can be any JS object, including an array or one of its elements.</p>
-<p><em>Note: If one of the arguments to $bind is a variable, and the other a JS object, the variable behaves as if it is the first argument even if it is in the second position. This happens due to the nature of the unification algorithm (in this release) which gives priority to variables over values. When working with a variable and an object in $bind, it is advisable to put the variable in the first position to avoid apparently confusing results.</em></p>
-<p>Prefer <code>{ $bind : [ &#39;$var&#39;, &lt;value&gt; ] }</code> </p>
-<p>Avoid <code>{ $bind : [ &lt;value&gt;, &#39;$var&#39; ] }  // behaves like the preferred version in any case</code> </p>
 <p>The $bind builtin can also handle complex patterns of object unification, as shown below :</p>
 <pre><code>
 var JSL = require(&#39;../../..&#39;);
@@ -570,27 +681,27 @@ response
 {
     &quot;response&quot;: {
         &quot;date&quot;: [
-            &quot;Fri May 06 2016 18:55:43 GMT-0700 (PDT)&quot;
+            &quot;Wed May 18 2016 12:13:01 GMT-0700 (PDT)&quot;
         ],
         &quot;tomorrow&quot;: [
-            &quot;Sat May 07 2016 18:55:43 GMT-0700 (PDT)&quot;
+            &quot;Thu May 19 2016 12:13:01 GMT-0700 (PDT)&quot;
         ],
         &quot;addFive&quot;: [
-            &quot;Wed May 11 2016 18:55:43 GMT-0700 (PDT)&quot;
+            &quot;Mon May 23 2016 12:13:01 GMT-0700 (PDT)&quot;
         ],
         &quot;setTimestamp&quot;: [
             {
                 &quot;to&quot;: &quot;sales@vinod-denim.com&quot;,
                 &quot;subject&quot;: &quot;test subject&quot;,
                 &quot;msgtext&quot;: &quot;test message&quot;,
-                &quot;timestamp&quot;: &quot;Fri May 06 2016 18:55:43 GMT-0700 (PDT)&quot;
+                &quot;timestamp&quot;: &quot;Wed May 18 2016 12:13:01 GMT-0700 (PDT)&quot;
             }
         ],
         &quot;dateParts&quot;: [
             {
-                &quot;date&quot;: &quot;Fri May 06 2016 18:55:43 GMT-0700 (PDT)&quot;,
+                &quot;date&quot;: &quot;Wed May 18 2016 12:13:01 GMT-0700 (PDT)&quot;,
                 &quot;m&quot;: 5,
-                &quot;d&quot;: 7,
+                &quot;d&quot;: 18,
                 &quot;y&quot;: 2016
             }
         ]
@@ -599,7 +710,7 @@ response
         &quot;to&quot;: &quot;sales@vinod-denim.com&quot;,
         &quot;subject&quot;: &quot;test subject&quot;,
         &quot;msgtext&quot;: &quot;test message&quot;,
-        &quot;timestamp&quot;: &quot;Fri May 06 2016 18:55:43 GMT-0700 (PDT)&quot;
+        &quot;timestamp&quot;: &quot;Wed May 18 2016 12:13:01 GMT-0700 (PDT)&quot;
     }
 }
 
@@ -700,6 +811,7 @@ var ruleset = [
     ],
     [ 
         { OoO_deep : &#39;$input&#39;},
+        { $call : [ &#39;log&#39;, &#39;$input&#39; ] },
         { $bind : [ &#39;$input&#39;, {} ] },
         { $each : [ &#39;$input&#39;, &#39;$value&#39;, &#39;$key&#39;, 
             { $or : [
@@ -733,6 +845,7 @@ function checkType (x, type) {
     if (typesTable[type] != null) {
         result = typesTable[type](x)
     }
+    console.log(&#39;checkType: &#39;, x, type, result)
     return result;
 }
 
@@ -743,7 +856,7 @@ var callbacks = {
 var response = {};
 var query;
 
-query =     [{AoA : AoA}];
+/*query =     [{AoA : AoA}];
 var jsl = new JSL ({rules : ruleset, query: query, callbacks : callbacks});
 response.AoA = jsl.run();
 
@@ -761,12 +874,12 @@ response.OoO = jsl.run();
 
 query =     [{OoO_deep : OoO_deep}];
 jsl = new JSL({rules : ruleset, query: query, callbacks : callbacks});
-response.OoO_deep = jsl.run();
+response.OoO_deep = jsl.run();*/
 
 query =     [{OoO_deep : OoO_deep_fail}];
 jsl = new JSL({rules : ruleset, query: query, callbacks : callbacks});
 response.OoO_deep_fail = jsl.run();
-
+console.log(JSON.stringify(response,null,2))
 module.exports = response ;
 
 
@@ -774,104 +887,6 @@ module.exports = response ;
 response 
 
 {
-    &quot;AoA&quot;: [
-        [
-            {
-                &quot;AoA&quot;: [
-                    [
-                        1
-                    ],
-                    [
-                        2
-                    ],
-                    [
-                        3
-                    ],
-                    [
-                        4
-                    ]
-                ]
-            }
-        ]
-    ],
-    &quot;AoO&quot;: [
-        [
-            {
-                &quot;AoO&quot;: [
-                    {
-                        &quot;a&quot;: 1
-                    },
-                    {
-                        &quot;b&quot;: 2
-                    },
-                    {
-                        &quot;c&quot;: 3
-                    },
-                    {
-                        &quot;d&quot;: 4
-                    }
-                ]
-            }
-        ]
-    ],
-    &quot;OoA&quot;: [
-        [
-            {
-                &quot;OoA&quot;: {
-                    &quot;a&quot;: [
-                        1
-                    ],
-                    &quot;b&quot;: [
-                        2
-                    ],
-                    &quot;c&quot;: [
-                        3
-                    ],
-                    &quot;d&quot;: [
-                        4
-                    ]
-                }
-            }
-        ]
-    ],
-    &quot;OoO&quot;: [
-        [
-            {
-                &quot;OoO&quot;: {
-                    &quot;a&quot;: {
-                        &quot;a&quot;: 1
-                    },
-                    &quot;b&quot;: {
-                        &quot;b&quot;: 2
-                    },
-                    &quot;c&quot;: {
-                        &quot;c&quot;: 3
-                    },
-                    &quot;d&quot;: {
-                        &quot;d&quot;: 4
-                    }
-                }
-            }
-        ]
-    ],
-    &quot;OoO_deep&quot;: [
-        [
-            {
-                &quot;OoO_deep&quot;: {
-                    &quot;a&quot;: {
-                        &quot;b&quot;: {
-                            &quot;c&quot;: {
-                                &quot;d&quot;: 1
-                            },
-                            &quot;e&quot;: {
-                                &quot;f&quot;: 2
-                            }
-                        }
-                    }
-                }
-            }
-        ]
-    ],
     &quot;OoO_deep_fail&quot;: []
 } 
 

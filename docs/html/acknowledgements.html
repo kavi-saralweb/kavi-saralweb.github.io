@@ -22,11 +22,13 @@
 </li>
 </ol>
 <h3 id="summary">Summary</h3>
-<p>JSL borrows heavily from the reference implementation of a logic programming language in <a href="https://mitpress.mit.edu/sicp/full-text/book/book-Z-H-29.html#%_sec_4.4">section 4.4</a> of the SICP book. The core unification and environment management routines have been ported from Scheme to JS+JSON. The mapping was bound to be imperfect due to the separation of code and data in JS (and JSON). In any case, some features of the textbook implementation were consciously ommitted :</p>
+<p>JSL borrows heavily from the reference implementation of a logic programming language in <a href="https://mitpress.mit.edu/sicp/full-text/book/book-Z-H-29.html#%_sec_4.4">section 4.4</a> of the SICP book. The core unification and environment management routines have been ported from Scheme to JS+JSON. The mapping was bound to be imperfect due to the separation of code and data in JS (and JSON). In any case, some features of the textbook implementation were consciously ommitted / modified :</p>
 <ol>
 <li><p>Streams : purely a schedule issue, it was easier to do an in-memory recursive implementation, using the jsProlog implementation by jan as a starting point.</p>
 </li>
 <li><p>List processing using the dot(.) operator : a parseList callback is provided instead, along with other wrappers to native JS Array and Object processing facilities.</p>
+</li>
+<li><p>Unification is based on object containment instead of equality. Thus, <code>{ $bind : [&#39;$obj1&#39;, &#39;$obj2&#39;] }</code> succeeds if obj2 is contained within obj1, but not the other way round. This has implications upon the core unification and environment management algorithms. The feature was needed to support most practical examples of data binding and extraction using json data.</p>
 </li>
 </ol>
 
